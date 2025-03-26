@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Risk Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            border: 2px dashed #ddd;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        .file-input {
+            margin: 20px 0;
+        }
+        input[type="file"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .results-section {
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.loading {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .hidden {
+            display: none;
+        }
+        .risk-high {
+            background-color: #f8d7da;
+        }
+        .risk-medium {
+            background-color: #fff3cd;
+        }
+        .risk-low {
+            background-color: #d4edda;
+        }
+        .actions {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4CAF50;
+            text-align: center;
+            color: white;
+            line-height: 20px;
+            border-radius: 5px;
+            transition: width 0.5s ease-in-out;
+        }
+        .graphs-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-top: 30px;
+        }
+        .graph-item {
+            width: 48%;  
+            margin-bottom: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+        .filter-section {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .filter-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        .filter-group select,
+        .filter-group input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .filter-buttons button {
+            padding: 10px 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Credit Risk Analysis System</h1>
+
+    <div class="upload-section">
+        <h3>Upload CSV File</h3>
+        <p>Select a CSV file for analysis, or the default file will be used.</p>
+        <div class="file-input">
+            <input type="file" id="csvFile" accept=".csv" />
+        </div>
+        <button onclick="uploadFile()" id="uploadBtn">Upload and Process</button>
+        <div id="progressBarContainer" class="progress-bar-container hidden">
+            <div id="progressBar" class="progress-bar">0%</div>
+        </div>
+    </div>
+
+    <div id="status" class="status hidden"></div>
+
+    <div class="actions">
+        <button onclick="loadResults()" id="loadBtn">Load Results</button>
+        <button onclick="downloadResults()" id="downloadBtn">Download CSV</button>
+        <button onclick="clearResults()" id="clearBtn">Clear Results</button>
+    </div>
+</div>
+
+<div class="container graphs-container">
+    <div class="graph-item">
+        <h2>Risk Category Distribution</h2>
+        <canvas id="riskCategoryChart"></canvas>
+    </div>
+    <div class="graph-item">
+        <h2>Credit Score Distribution</h2>
+        <canvas id="creditScoreChart"></canvas>
+    </div>
+    <div class="graph-item">
+        <h2>Income vs. Debt Ratio</h2>
+        <canvas id="incomeDebtChart"></canvas>
+    </div>
+    <div class="graph-item">
+        <h2>Loan Amount Distribution</h2>
+        <canvas id="loanAmountChart"></canvas>
+    </div>
+</div>
+
+<div class="container results-section">
+    <h3>Analysis Results</h3>
+
+    <div class="filter-section">
+        <div class="filter-group">
+            <label for="filterCreditScoreMin">Credit Score (Min):</label>
+            <input type="number" id="filterCreditScoreMin" placeholder="e.g., 300">
+        </div>
+        <div class="filter-group">
+            <label for="filterCreditScoreMax">Credit Score (Max):</label>
+            <input type="number" id="filterCreditScoreMax" placeholder="e.g., 850">
+        </div>
+        <div class="filter-group">
+            <label for="filterIncomeMin">Income (Min):</label>
+            <input type="number" id="filterIncomeMin" placeholder="e.g., 20000">
+        </div>
+        <div class="filter-group">
+            <label for="filterIncomeMax">Income (Max):</label>
+            <input type="number" id="filterIncomeMax" placeholder="e.g., 100000">
+        </div>
+        <div class="filter-group">
+            <label for="filterDebtRatioMin">Debt Ratio (Min):</label>
+            <input type="number" step="0.01" id="filterDebtRatioMin" placeholder="e.g., 0.1">
+        </div>
+        <div class="filter-group">
+            <label for="filterDebtRatioMax">Debt Ratio (Max):</label>
+            <input type="number" step="0.01" id="filterDebtRatioMax" placeholder="e.g., 0.5">
+        </div>
+        <div class="filter-group">
+            <label for="filterRiskCategory">Risk Category:</label>
+            <select id="filterRiskCategory">
+                <option value="">All</option>
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+            </select>
+        </div>
+        <div class="filter-buttons">
+            <button onclick="applyFilters()">Apply Filters</button>
+            <button onclick="clearFilters()">Clear Filters</button>
+        </div>
+    </div>
+
+    <div id="resultsContainer">
+        <p>No results to display. Upload a CSV file to begin analysis.</p>
+    </div>
+</div>
+
+<script>
+    const API_BASE = '/api/credit-risk';
+    let allResultsData = []; 
+
+    function clearResults() {
+        const container = document.getElementById('resultsContainer');
+        container.innerHTML = '<p>No results to display. Upload a CSV file to begin analysis.</p>';
+        hideStatus();
+        allResultsData = [];
+        clearGraphs();
+    }
+
+    function showStatus(message, type) {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${type}`;
+        statusDiv.classList.remove('hidden');
+    }
+
+    function hideStatus() {
+        document.getElementById('status').classList.add('hidden');
+    }
+
+    function updateProgressBar(progress) {
+        const progressBarContainer = document.getElementById('progressBarContainer');
+        const progressBar = document.getElementById('progressBar');
+        progressBarContainer.classList.remove('hidden');
+        progressBar.style.width = `${progress}%`;
+        progressBar.textContent = `${progress}%`;
+    }
+
+    function hideProgressBar() {
+        const progressBarContainer = document.getElementById('progressBarContainer');
+        progressBarContainer.classList.add('hidden');
+        const progressBar = document.getElementById('progressBar');
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+    }
+
+    async function uploadFile() {
+        const fileInput = document.getElementById('csvFile');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        let file;
+
+        if (fileInput.files[0]) {
+            file = fileInput.files[0];
+        } else {
+            try {
+                const response = await fetch('/data/credit-risk-data.csv');
+                const fileText = await response.text();
+                const blob = new Blob([fileText], { type: 'text/csv' });
+                file = new File([blob], 'credit-risk-data.csv');
+            } catch (err) {
+                showStatus('Failed to load default CSV from project', 'error');
+                return;
+            }
+        }
+
+        const requiredHeaders = [
+            "customerId", "customerName", "creditScore", "income", "debtToIncomeRatio", "paymentHistory",
+            "employmentYears", "loanAmount", "loanPurpose", "existingLoans", "propertyValue", "maritalStatus",
+            "educationLevel", "industry", "riskCategory", "status", "additionalInfo", "recommendations",
+            "birthDate", "age", "employmentType", "monthlyExpenses", "savingsBalance", "creditHistoryYears",
+            "numberOfCreditCards", "creditCardUtilization", "hasBankruptcy", "bankruptcyYearsAgo",
+            "hasForeclosure", "foreclosureYearsAgo", "residenceType", "yearsAtCurrentAddress",
+            "loanTerm", "interestRate", "collateralType", "collateralValue", "guarantorStatus",
+            "guarantorCreditScore", "guarantorIncome", "guarantorRelationship"
+        ];
+
+        const fileText = await file.text();
+        const fileHeaders = fileText.split('\n')[0].trim().split(',');
+
+        const hasAllHeaders = requiredHeaders.every(h => fileHeaders.includes(h));
+        if (!hasAllHeaders) {
+            showStatus('CSV is missing required headers', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        uploadBtn.disabled = true;
+        showStatus('Processing file... Please wait.', 'loading');
+        updateProgressBar(0);  
+
+        try {
+       
+            let progress = 0;
+            const interval = setInterval(() => {
+                if (progress < 90) {
+                    progress += 10;
+                    updateProgressBar(progress);
+                } else {
+                    clearInterval(interval);
+                }
+            }, 200);
+
+            const response = await fetch(`${API_BASE}/upload`, {
+                method: 'POST',
+                body: formData
+            });
+
+            clearInterval(interval); 
+            updateProgressBar(100); 
+
+            const result = await response.json();
+
+            if (response.ok && result.status === 'success') {
+                console.log("processed", result);
+                showStatus(`Success! Processed ${result.recordsProcessed} records.`, 'success');
+                setTimeout(loadResults, 1000);
+            } else {
+                showStatus(`Error: ${result.message}`, 'error');
+            }
+        } catch (error) {
+            showStatus(`Upload failed: ${error.message}`, 'error');
+        } finally {
+            uploadBtn.disabled = false;
+            hideProgressBar();  
+        }
+    }
+
+    async function loadResults() {
+        const loadBtn = document.getElementById('loadBtn');
+        loadBtn.disabled = true;
+
+        try {
+            const response = await fetch(`${API_BASE}/results`);
+            const results = await response.json();
+
+            if (response.ok) {
+                allResultsData = results;  
+                displayResults(results);
+                renderGraphs(results);
+                hideStatus();
+            } else {
+                showStatus('Failed to load results', 'error');
+            }
+        } catch (error) {
+            showStatus(`Failed to load results: ${error.message}`, 'error');
+        } finally {
+            loadBtn.disabled = false;
+        }
+    }
+
+    function displayResults(results) {
+        const container = document.getElementById('resultsContainer');
+
+        if (!results || results.length === 0) {
+            container.innerHTML = '<p>No results found.</p>';
+            return;
+        }
+
+        const table = document.createElement('table');
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Customer ID</th>
+                    <th>Name</th>
+                    <th>Credit Score</th>
+                    <th>Income</th>
+                    <th>Debt Ratio</th>
+                    <th>Risk Category</th>
+                    <th>Recommendations</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${results.map(item => `
+                    <tr class="${getRiskClass(item.riskCategory)}">
+                        <td>${item.customerId || 'N/A'}</td>
+                        <td>${item.customerName || 'N/A'}</td>
+                        <td>${item.creditScore || 'N/A'}</td>
+                        <td>$${item.income ? item.income.toLocaleString() : 'N/A'}</td>
+                        <td>${item.debtToIncomeRatio ? (item.debtToIncomeRatio * 100).toFixed(1) + '%' : 'N/A'}</td>
+                        <td>${item.riskCategory || 'N/A'}</td>
+                        <td title="${item.recommendations || 'No recommendations'}" style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            ${item.recommendations || 'No recommendations'}
+                        </td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        `;
+
+        container.innerHTML = '';
+        container.appendChild(table);
+    }
+
+    function getRiskClass(riskCategory) {
+        if (!riskCategory) return '';
+        const risk = riskCategory.toLowerCase();
+        if (risk.includes('high')) return 'risk-high';
+        if (risk.includes('medium')) return 'risk-medium';
+        if (risk.includes('low')) return 'risk-low';
+        return '';
+    }
+
+    async function downloadResults() {
+        const downloadBtn = document.getElementById('downloadBtn');
+        downloadBtn.disabled = true;
+
+        try {
+            const response = await fetch(`${API_BASE}/results/download`);
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'credit-risk-results.csv';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                showStatus('File downloaded successfully', 'success');
+            } else {
+                showStatus('No results file available for download', 'error');
+            }
+        } catch (error) {
+            showStatus(`Download failed: ${error.message}`, 'error');
+        } finally {
+            downloadBtn.disabled = false;
+        }
+    }
+
+     let riskCategoryChart, creditScoreChart, incomeDebtChart, loanAmountChart;
+
+    function clearGraphs() {
+        if (riskCategoryChart) riskCategoryChart.destroy();
+        if (creditScoreChart) creditScoreChart.destroy();
+        if (incomeDebtChart) incomeDebtChart.destroy();
+        if (loanAmountChart) loanAmountChart.destroy();
+    }
+
+    function renderGraphs(data) {
+        clearGraphs();  
+
+         const riskCategories = {};
+        data.forEach(item => {
+            const category = item.riskCategory || 'Unknown';
+            riskCategories[category] = (riskCategories[category] || 0) + 1;
+        });
+
+        const riskLabels = Object.keys(riskCategories);
+        const riskCounts = Object.values(riskCategories);
+        const riskColors = riskLabels.map(label => {
+            if (label.toLowerCase().includes('high')) return '#dc3545';
+            if (label.toLowerCase().includes('medium')) return '#ffc107';
+            if (label.toLowerCase().includes('low')) return '#28a745';
+            return '#6c757d';
+        });
+
+        const ctxRisk = document.getElementById('riskCategoryChart').getContext('2d');
+        riskCategoryChart = new Chart(ctxRisk, {
+            type: 'pie',
+            data: {
+                labels: riskLabels,
+                datasets: [{
+                    data: riskCounts,
+                    backgroundColor: riskColors,
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Risk Category Distribution'
+                    }
+                }
+            }
+        });
+
+         const creditScores = data.map(item => item.creditScore).filter(score => typeof score === 'number');
+        const creditScoreBins = {
+            '300-579 (Poor)': 0,
+            '580-669 (Fair)': 0,
+            '670-739 (Good)': 0,
+            '740-799 (Very Good)': 0,
+            '800-850 (Exceptional)': 0
+        };
+
+        creditScores.forEach(score => {
+            if (score >= 300 && score <= 579) creditScoreBins['300-579 (Poor)']++;
+            else if (score >= 580 && score <= 669) creditScoreBins['580-669 (Fair)']++;
+            else if (score >= 670 && score <= 739) creditScoreBins['670-739 (Good)']++;
+            else if (score >= 740 && score <= 799) creditScoreBins['740-799 (Very Good)']++;
+            else if (score >= 800 && score <= 850) creditScoreBins['800-850 (Exceptional)']++;
+        });
+
+        const creditScoreLabels = Object.keys(creditScoreBins);
+        const creditScoreCounts = Object.values(creditScoreBins);
+
+        const ctxCredit = document.getElementById('creditScoreChart').getContext('2d');
+        creditScoreChart = new Chart(ctxCredit, {
+            type: 'bar',
+            data: {
+                labels: creditScoreLabels,
+                datasets: [{
+                    label: 'Number of Customers',
+                    data: creditScoreCounts,
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Credit Score Distribution'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Customers'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Credit Score Range'
+                        }
+                    }
+                }
+            }
+        });
+
+         const incomeDebtData = data.map(item => ({
+            x: item.income,
+            y: item.debtToIncomeRatio,
+            riskCategory: item.riskCategory
+        })).filter(item => typeof item.x === 'number' && typeof item.y === 'number');
+
+        const ctxIncomeDebt = document.getElementById('incomeDebtChart').getContext('2d');
+        incomeDebtChart = new Chart(ctxIncomeDebt, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Customer Data',
+                    data: incomeDebtData,
+                    backgroundColor: incomeDebtData.map(item => {
+                        const risk = item.riskCategory ? item.riskCategory.toLowerCase() : '';
+                        if (risk.includes('high')) return 'rgba(255, 99, 132, 0.6)';
+                        if (risk.includes('medium')) return 'rgba(255, 206, 86, 0.6)';
+                        if (risk.includes('low')) return 'rgba(75, 192, 192, 0.6)';
+                        return 'rgba(153, 102, 255, 0.6)';
+                    })
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const item = context.raw;
+                                return `Income: $${item.x.toLocaleString()}, Debt Ratio: ${(item.y * 100).toFixed(1)}%, Risk: ${item.riskCategory || 'N/A'}`;
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Income vs. Debt Ratio by Risk Category'
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        title: {
+                            display: true,
+                            text: 'Income ($)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Debt to Income Ratio'
+                        }
+                    }
+                }
+            }
+        });
+
+         const loanAmounts = data.map(item => item.loanAmount).filter(amount => typeof amount === 'number');
+        const loanAmountBins = {};
+        const binSize = 10000;
+        const maxLoan = Math.max(...loanAmounts);
+
+        for (let i = 0; i <= maxLoan + binSize; i += binSize) {
+            const lowerBound = i;
+            const upperBound = i + binSize;
+            loanAmountBins[`$${lowerBound.toLocaleString()}-$${upperBound.toLocaleString()}`] = 0;
+        }
+
+        loanAmounts.forEach(amount => {
+            const binKey = `$${(Math.floor(amount / binSize) * binSize).toLocaleString()}-$${((Math.floor(amount / binSize) * binSize) + binSize).toLocaleString()}`;
+            if (loanAmountBins[binKey] !== undefined) {
+                loanAmountBins[binKey]++;
+            }
+        });
+
+        const sortedLoanAmountLabels = Object.keys(loanAmountBins).sort((a, b) => {
+            const numA = parseInt(a.split('-')[0].replace('$', '').replace(/,/g, ''));
+            const numB = parseInt(b.split('-')[0].replace('$', '').replace(/,/g, ''));
+            return numA - numB;
+        });
+        const sortedLoanAmountCounts = sortedLoanAmountLabels.map(label => loanAmountBins[label]);
+
+        const ctxLoanAmount = document.getElementById('loanAmountChart').getContext('2d');
+        loanAmountChart = new Chart(ctxLoanAmount, {
+            type: 'line',
+            data: {
+                labels: sortedLoanAmountLabels,
+                datasets: [{
+                    label: 'Number of Loans',
+                    data: sortedLoanAmountCounts,
+                    backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1,
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Loan Amount Distribution'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Loans'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Loan Amount Range'
+                        },
+                        ticks: {
+                            autoSkip: true,
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+     function applyFilters() {
+        const creditScoreMin = parseFloat(document.getElementById('filterCreditScoreMin').value);
+        const creditScoreMax = parseFloat(document.getElementById('filterCreditScoreMax').value);
+        const incomeMin = parseFloat(document.getElementById('filterIncomeMin').value);
+        const incomeMax = parseFloat(document.getElementById('filterIncomeMax').value);
+        const debtRatioMin = parseFloat(document.getElementById('filterDebtRatioMin').value);
+        const debtRatioMax = parseFloat(document.getElementById('filterDebtRatioMax').value);
+        const riskCategory = document.getElementById('filterRiskCategory').value;
+
+        const filteredResults = allResultsData.filter(item => {
+            let passed = true;
+
+            if (typeof creditScoreMin === 'number' && item.creditScore < creditScoreMin) passed = false;
+            if (typeof creditScoreMax === 'number' && item.creditScore > creditScoreMax) passed = false;
+            if (typeof incomeMin === 'number' && item.income < incomeMin) passed = false;
+            if (typeof incomeMax === 'number' && item.income > incomeMax) passed = false;
+            if (typeof debtRatioMin === 'number' && item.debtToIncomeRatio < debtRatioMin) passed = false;
+            if (typeof debtRatioMax === 'number' && item.debtToIncomeRatio > debtRatioMax) passed = false;
+            if (riskCategory && item.riskCategory !== riskCategory) passed = false;
+
+            return passed;
+        });
+
+        displayResults(filteredResults);
+    }
+
+    function clearFilters() {
+        document.getElementById('filterCreditScoreMin').value = '';
+        document.getElementById('filterCreditScoreMax').value = '';
+        document.getElementById('filterIncomeMin').value = '';
+        document.getElementById('filterIncomeMax').value = '';
+        document.getElementById('filterDebtRatioMin').value = '';
+        document.getElementById('filterDebtRatioMax').value = '';
+        document.getElementById('filterRiskCategory').value = '';
+        displayResults(allResultsData);  
+    }
+
+    window.onload = function() {
+        loadResults();
+    };
+</script>
+</body>
+</html>
