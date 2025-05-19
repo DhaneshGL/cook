@@ -15,7 +15,7 @@ function App() {
     <Router>
       <div className="App">
         <ToastContainer />
-
+//Router
         <Navbar />
         <Routes>
           <Route exact path="/" element={<Home />} />
